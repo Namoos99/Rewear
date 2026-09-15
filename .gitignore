@@ -1,0 +1,20 @@
+# data — never commit the Kaggle archive
+data/raw/*
+data/sample/
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+results/
+*.npy
+
+# python
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# os / editor
+.DS_Store
+.vscode/
