@@ -75,8 +75,6 @@ pip install -e ".[dev]"
 make sample      # synthetic data with the exact H&M schema — no download needed
 make test        # 19 tests, ~5 seconds
 make evaluate    # Phase 1 table + λ sweep → results/phase1_results.csv
-make ranker      # Phases 3+4: LightGBM ranker, frontier with CIs → docs/frontier.png
-make demo        # Phase 5: static demo → docs/demo/index.html
 make ranker      # Phases 3–4: LightGBM ranker, bootstrap frontier → results/, docs/frontier.png
 make demo        # Phase 5: static demo → docs/demo/index.html
 ```
@@ -85,44 +83,7 @@ To run on the real data: download the Kaggle archive into `data/raw/` (you need 
 
 ```bash
 python scripts/evaluate.py --data data/raw --sample-customers 50000
+python scripts/train_ranker.py --data data/raw --sample-customers 50000
 ```
 
 ## Project layout
-
-```
-src/rewear/
-  data.py            loading, customer sampling, temporal split (no leakage)
-  baseline.py        popularity + time-decayed item-kNN
-  sustainability.py  material parsing, wear-again proxy, λ-reranker
-  content.py         text embeddings (TF-IDF or sentence-transformers), CLIP image embeddings
-  candidates.py      multi-source candidate generation (repurchase, kNN, content, popularity)
-  ranker.py          feature engineering + LightGBM LambdaRank, leak-free training scheme
-  frontier.py        bootstrap CIs and the accuracy-vs-sustainability sweep/plot
-  metrics.py         MAP@K, coverage, novelty, long-tail exposure
-  candidates.py      multi-source candidate generation (repurchase / kNN / content / popularity)
-  ranker.py          feature building + LightGBM LambdaRank, leak-free two-window training
-  frontier.py        bootstrap CIs and the accuracy-vs-sustainability plot
-  synthetic.py       schema-faithful synthetic generator for tests and CI
-scripts/             make_sample.py, evaluate.py, train_ranker.py, export_demo.py, train_ranker.py, export_demo.py
-tests/               pytest suite (runs in CI on every push)
-docs/DECISIONS.md    architecture decisions, written as interview answers
-docs/demo/           the static demo (template.html → index.html via export_demo.py)
-docs/demo/           the static demo (GitHub Pages)
-```
-
-## Roadmap
-
-- [x] **Phase 1 — Baselines.** Temporal split, popularity, item-kNN, full metric suite, λ sweep.
-- [x] **Phase 2 — Content tower.** Text embeddings with a no-download fallback; CLIP image embeddings for cold-start and the demo.
-- [x] **Phase 3 — Learned reranker.** Multi-source candidate generation → LightGBM LambdaRank with sustainability features.
-- [x] **Phase 4 — Evaluation write-up.** The accuracy-vs-sustainability frontier with bootstrap confidence intervals.
-- [x] **Phase 5 — Demo.** Static page: pick a wardrobe, drag the dial, watch the rail reorder.
-- [ ] **Next.** CLIP image embeddings in the candidate set; per-customer λ learned from behaviour; return-rate as a "didn't work out" label.
-
-## Honest limitations
-
-- We can't observe "wear" — `wear_again_score` is a category-level repurchase proxy, not garment durability.
-- `material_score` is keyword-based on marketing copy. It's directionally right and easy to fool.
-- A single λ is a blunt instrument. A production system would learn per-user or per-context weights.
-
-These are written up properly in [`docs/DECISIONS.md`](docs/DECISIONS.md).
