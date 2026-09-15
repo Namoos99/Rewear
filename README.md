@@ -26,21 +26,21 @@ Every model is evaluated on **accuracy and beyond**: MAP@12 (the Kaggle metric),
 
 ## Results
 
-*Phase 1 on the synthetic sample (real-data numbers land once the full pipeline is run — see roadmap).*
+*Phase 1 on 50,000 sampled H&M customers (real data). Validation = final week held out; 2,590 customers with purchases in that week; catalogue of 71,940 articles.*
 
 | model | MAP@12 | coverage | novelty | long-tail exposure |
 |---|---|---|---|---|
-| popularity | 0.235 | 0.04 | 3.30 | 0.00 |
-| item-kNN | 0.104 | 0.93 | 4.77 | 0.43 |
-| item-kNN + Rewear (λ=0.2) | 0.095 | 0.91 | 4.78 | 0.42 |
-| item-kNN + Rewear (λ=0.5) | 0.062 | 0.65 | 5.07 | 0.43 |
+| popularity | 0.00810 | 0.0002 | 4.98 | 0.17 |
+| item-kNN | 0.00522 | 0.2501 | 8.02 | 0.74 |
+| item-kNN + Rewear (λ=0.2) | **0.00602** | 0.2473 | 7.98 | 0.73 |
+| item-kNN + Rewear (λ=0.5) | 0.00448 | 0.2199 | 7.94 | 0.72 |
 
-Two things are already visible. First, popularity is a brutally strong baseline in fashion — a well-known result from the Kaggle competition, and the reason Phase 3 exists. Second, the λ dial does exactly what it should: coverage and novelty move up, MAP@12 moves down, and the shape of that trade-off is the product decision.
+Two findings. First, popularity wins on raw accuracy — the same result the Kaggle leaderboard produced, now confirmed here, and the reason Phase 3 exists. Second, and more interesting: a *light* sustainability rerank (λ=0.2) doesn't just cost accuracy, it **improves** MAP@12 by 15% over plain item-kNN while giving up almost nothing in coverage or novelty. The wear-again and material signals appear to regularise a noisy collaborative-filtering signal. Above λ≈0.3 the expected trade-off takes over and accuracy falls. That knee in the curve is the product decision.
 
 ## Quickstart
 
 ```bash
-git clone https://github.com/<you>/rewear && cd rewear
+git clone https://github.com/Namoos99/Rewear && cd Rewear
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
