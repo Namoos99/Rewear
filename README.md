@@ -61,6 +61,10 @@ A single MAP@12 on 2,590 customers is noisy, so every point on the λ sweep gets
 
 Full table with intervals: `results/frontier.csv` after `make ranker`.
 
+### External validation
+
+Kaggle's official leaderboard for this dataset gives a second, independent read on these numbers. A pure-popularity submission — no personalization at all — scores about 0.0056. A silver-medal solution (45th of 3,006 teams, ensembling two candidate-generation strategies across three separate ranking models) scores roughly 0.0292–0.0300. Our Phase 3 ranker's internal validation score, 0.0247, falls in that same range — encouraging, though not a direct comparison, since it's measured on our own held-out week rather than Kaggle's official test set.
+
 ## Quickstart
 
 ```bash
