@@ -46,6 +46,56 @@ Because CI has no GPU, no model cache, and shouldn't need either to prove the pi
 
 The real archive is ~30GB with images, which nobody should need to download to run `pytest`. The generator writes the exact three-file schema with latent taste clusters and a Pareto popularity curve, so collaborative filtering has real structure to find and the tests can assert *behaviour* (kNN beats popularity on clustered data, λ=0 is the identity, the reranker raises material score) rather than just "it didn't crash."
 
+### Why train the ranker on the week *before* validation?
+
+Because a ranker needs labels, and the only labels that don't leak are from a window the evaluation never sees. The scheme is: fit the candidate generators on everything up to week N-1, generate candidates for the customers who bought in week N-1, label those candidates by what they actually bought, train LightGBM. Then re-fit the generators on everything up to week N and score week N with the trained model. The ranker learns "which candidates from these sources convert", never "what was bought in the week I'm graded on". It's the same discipline as the temporal split, one level down.
+
+### Why downsample negatives, and why 30 per positive?
+
+A customer with 2 purchases and 150 candidates is 148 negatives to 2 positives. LambdaRank handles imbalance better than a classifier, but training on every negative is slow and the extra ones are mostly uninformative (the 120th popularity candidate nobody bought). 30:1 keeps the hard negatives — items several sources agreed on that still didn't convert — which is where the learning is. It's a speed/quality knob, not a principle; I'd sweep it with more compute.
+
+### Why are the sustainability signals features in the ranker *and* a dial on top?
+
+Two different questions. As features, they let the model learn whether material or wear-again *predicts purchase* — on the Phase 1 data, a light nudge helped, and the ranker can find that on its own. As a dial, they let a product owner push *past* what predicts purchase toward what they value, and see the cost. The frontier plot is the ranker's own accuracy traded against its own sustainability profile; that's a stronger statement than the Phase 1 version, because this model already knows everything the dial knows.
+
+### Why bootstrap confidence intervals?
+
+Because 2,590 validation customers and MAP@12 values around 0.01 produce a noisy estimate, and a table with five decimals invites overreading. Resampling customers with replacement 500 times gives a 95% interval per λ. If two points' intervals overlap, I say they're indistinguishable. This is the same instinct as reporting that r=0.37 explains only 14% of variance: put the uncertainty next to the number.
+
+### Why a static demo and not a Streamlit app?
+
+Because the demo has to still work in two years when someone clicks it from a resume. A Streamlit app needs a running server, an environment, and the dataset; a static page needs a CDN. Precomputing 24 wardrobes × 11 λ values × 12 items is ~300KB of JSON, which is nothing. The interaction — drag the dial, tiles reorder, metrics update — is the whole story, and it doesn't need inference at request time. Offline resilience as a design default.
+
 ### What would you do differently at scale?
 
 Approximate nearest neighbours (FAISS/ScaNN) for the content tower; incremental item-item updates instead of a full recompute; per-user λ learned from behaviour (some customers clearly *want* the green option, most won't take a big accuracy hit for it); and an A/B test against return rate, not just clicks, because return rate is the closest online proxy to "kept wearing it."
+
+---
+
+### Why multi-source candidates instead of a better single model?
+
+Because the Phase 1 loss to popularity was a recall problem wearing an accuracy costume. Item-kNN can only propose items co-purchased with the customer's history; popularity can only propose the head; content can only propose look-alikes. Each misses what the others catch. Unioning them and letting a ranker sort it out is the standard production pattern (retrieval → ranking), and it's also what every strong Kaggle solution on this dataset did. I log candidate recall separately so I always know whether a weak MAP@12 is a retrieval ceiling or a ranking failure.
+
+### How do you train the ranker without leaking the validation week?
+
+Two temporal splits, nested. The outer split holds out the final week for evaluation. Inside the training portion, a second split holds out the *previous* week as the label week: generators are fit on everything before it, candidates are generated for customers active in it, and the ranker learns which candidates got bought. At evaluation time everything is refit on the full training portion and scored on the final week — a week the ranker has never seen a label from. The alternative (train and evaluate the ranker on the same week) is a common mistake that produces spectacular, meaningless numbers.
+
+### Why LambdaRank rather than a binary classifier?
+
+The objective matches the metric. MAP@12 cares about the *order* within a customer's list and only the top 12 of it; a classifier optimises pointwise probabilities across all customers at once and can spend its capacity separating easy negatives nobody would have shown anyway. LambdaRank with truncation at 12 focuses gradient where the metric is measured. I downsample negatives per customer (30 per positive) so training stays fast and groups stay balanced-ish.
+
+### Why put the sustainability signals into the ranker *and* keep the λ dial?
+
+They answer different questions. As features, the ranker learns whether material and wear-again *predict purchase* — on synthetic data they don't rank highly, which is honest: people don't buy on fibre content. The λ dial on top is the product lever: given a purchase-optimal ranking, how far do we deliberately move toward what lasts, and what does it cost? Phase 4 traces that curve for a model that already knows about sustainability, which is the fair version of the question.
+
+### Why bootstrap confidence intervals?
+
+Because the Phase 1 "λ=0.2 beats λ=0" finding on real data was a 15% relative gain on ~2,600 customers, and I couldn't tell from a point estimate whether that was signal. Resampling customers with replacement and recomputing MAP@12 gives a 95% interval for every point on the sweep. If intervals overlap, I say so. Overclaiming a regularisation effect that's actually noise would be worse than not finding it.
+
+### Why a static demo instead of a live model?
+
+Because a portfolio demo has to still work in two years with zero maintenance. The export script trains the pipeline, picks sixteen wardrobes, precomputes their top-12 at eleven λ settings, and inlines everything into one HTML file GitHub Pages serves for free. No backend, no cold starts, no API keys expiring. The trade-off — you can't type in your own wardrobe — is the right one for this artefact; the code to do that is all in the repo.
+
+### Why colour swatches instead of product images?
+
+Two reasons. The Kaggle image licence is for competition use, not for rehosting on my site. And a demo that depends on 105k images is a demo that breaks. The colour group is real data from the catalogue, it makes the reorder legible at a glance, and the material bar carries the sustainability signal — which is the thing the demo is actually about.

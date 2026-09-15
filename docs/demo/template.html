@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rewear — what you'll buy vs what you'll keep</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1c3326;        /* bottle green — text */
+    --paper: #fbfaf6;      /* page */
+    --field: #e6ebe1;      /* sage — quiet surfaces */
+    --moss: #4b6b4e;       /* interactive */
+    --thread: #b98a1e;     /* ochre — the sustainability signal */
+    --rule: #cdd4c9;
+    --max: 1120px;
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+  * { box-sizing: border-box; }
+  html { background: var(--paper); color: var(--ink); }
+  body {
+    margin: 0;
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    font-optical-sizing: auto;
+    font-size: 17px;
+    line-height: 1.55;
+  }
+  a { color: var(--moss); }
+  main { max-width: var(--max); margin: 0 auto; padding: 40px 24px 80px; }
+
+  header h1 {
+    font-weight: 300;
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    margin: 0 0 12px;
+    max-width: 18ch;
+  }
+  header p { max-width: 62ch; margin: 0 0 8px; }
+  header .fine { font-size: 0.92rem; color: #4a5a4f; }
+
+  /* ---------- the dial (hero) ---------- */
+  .dial { margin: 44px 0 36px; }
+  .dial-ends { display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 6px; }
+  .dial-ends span:last-child { text-align: right; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 44px; background: transparent; margin: 0; cursor: pointer;
+  }
+  input[type=range]:focus-visible { outline: 3px solid var(--thread); outline-offset: 6px; border-radius: 2px; }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 10px; border-radius: 5px;
+    background: linear-gradient(90deg, var(--moss) 0%, var(--thread) 100%);
+  }
+  input[type=range]::-moz-range-track {
+    height: 10px; border-radius: 5px;
+    background: linear-gradient(90deg, var(--moss) 0%, var(--thread) 100%);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 30px; height: 30px; margin-top: -10px; border-radius: 50%;
+    background: var(--paper); border: 4px solid var(--ink);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--paper); border: 4px solid var(--ink);
+  }
+
+  .readout {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 24px;
+    margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--rule);
+  }
+  .readout div { min-width: 0; }
+  .readout strong { display: block; font-weight: 500; font-size: 1.6rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .readout small { display: block; color: #4a5a4f; font-size: 0.86rem; margin-top: 2px; }
+  .readout .ci { color: #6b7a6f; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+
+  /* ---------- wardrobe picker ---------- */
+  .layout { display: grid; grid-template-columns: 260px 1fr; gap: 40px; align-items: start; }
+  .side h2, .recs h2 { font-weight: 500; font-size: 1.05rem; margin: 0 0 10px; }
+  .picker { display: flex; flex-direction: column; gap: 4px; margin: 0 0 22px; padding: 0; list-style: none; }
+  .picker button {
+    font: inherit; font-size: 0.95rem; text-align: left; width: 100%;
+    background: none; border: 0; border-left: 3px solid transparent; padding: 6px 10px; cursor: pointer; color: var(--ink);
+  }
+  .picker button:hover { background: var(--field); }
+  .picker button[aria-pressed=true] { border-left-color: var(--ink); background: var(--field); font-weight: 500; }
+  .picker button:focus-visible { outline: 2px solid var(--thread); outline-offset: 2px; }
+  .hist { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hist li { list-style: none; }
+  .hist .sw {
+    display: inline-flex; align-items: center; gap: 8px; font-size: 0.86rem;
+    padding: 4px 10px 4px 6px; border: 1px solid var(--rule); border-radius: 999px; background: #fff;
+  }
+  .hist .dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); }
+  .side p.fine { font-size: 0.86rem; color: #4a5a4f; margin: 10px 0 0; }
+
+  /* ---------- recommendation swatches ---------- */
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .tile {
+    position: relative; aspect-ratio: 4 / 5; padding: 12px; overflow: hidden;
+    border-radius: 3px; border: 1px solid rgba(0,0,0,.08);
+    display: flex; flex-direction: column; justify-content: flex-end;
+    transition: transform 420ms cubic-bezier(.2,.7,.2,1);
+    will-change: transform;
+  }
+  .tile .rank { position: absolute; top: 10px; left: 12px; font-size: 0.86rem; opacity: .75; font-variant-numeric: tabular-nums; }
+  .tile .name { font-weight: 500; line-height: 1.2; font-size: 0.98rem; }
+  .tile .meta { font-size: 0.82rem; opacity: .8; margin-top: 2px; }
+  .tile .thread {
+    height: 4px; margin-top: 10px; background: rgba(0,0,0,.12); border-radius: 2px; overflow: hidden;
+  }
+  .tile .thread i { display: block; height: 100%; background: var(--thread); transform-origin: left; }
+  .tile.light { color: var(--ink); }
+  .tile.dark { color: #fff; }
+  .tile.dark .thread { background: rgba(255,255,255,.25); }
+  .tile.new::after {
+    content: "new at this setting"; position: absolute; top: 10px; right: 10px;
+    font-size: 0.72rem; padding: 2px 7px; border-radius: 999px; background: var(--thread); color: #fff;
+  }
+  .legend { font-size: 0.86rem; color: #4a5a4f; margin: 14px 0 0; }
+  .legend i { display: inline-block; width: 22px; height: 4px; background: var(--thread); vertical-align: middle; margin-right: 6px; border-radius: 2px; }
+
+  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--rule); font-size: 0.9rem; color: #4a5a4f; max-width: 70ch; }
+
+  @media (max-width: 820px) {
+    .layout { grid-template-columns: 1fr; gap: 28px; }
+    .grid { grid-template-columns: repeat(3, 1fr); }
+    .readout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .picker { flex-direction: row; flex-wrap: wrap; }
+    .picker button { width: auto; border-left: 0; border-bottom: 3px solid transparent; }
+    .picker button[aria-pressed=true] { border-left-color: transparent; border-bottom-color: var(--ink); }
+  }
+  @media (max-width: 480px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Twelve pieces, one dial: what sells, or what lasts.</h1>
+    <p>Rewear ranks a real H&amp;M customer's next twelve recommendations, then lets you decide how much to trade purchase likelihood for lower-impact materials, staples over one-offs, and less of the best-seller rail. Drag the dial and watch the rail reorder — and what it costs.</p>
+    <p class="fine">Recommendations are precomputed from a LightGBM ranker over multi-source candidates. Accuracy is MAP@12 on a held-out week with a 95% bootstrap interval. <a href="https://github.com/Namoos99/Rewear">Code and write-up</a>.</p>
+  </header>
+
+  <section class="dial" aria-label="Sustainability dial">
+    <div class="dial-ends"><span>Most likely to be bought</span><span>Most likely to be kept</span></div>
+    <input id="lam" type="range" min="0" max="10" step="1" value="0" aria-label="Sustainability weight, 0 to 1" aria-valuetext="0.0">
+    <div class="readout" aria-live="polite">
+      <div><strong id="m-lam">0.0</strong><small>sustainability weight λ</small></div>
+      <div><strong id="m-map">–</strong><small>MAP@12 <span class="ci" id="m-ci"></span></small></div>
+      <div><strong id="m-mat">–</strong><small>mean material score shown</small></div>
+      <div><strong id="m-tail">–</strong><small>of slots outside the top 20% sellers</small></div>
+    </div>
+  </section>
+
+  <div class="layout">
+    <aside class="side">
+      <h2>Pick a wardrobe</h2>
+      <ul class="picker" id="picker"></ul>
+      <h2>What they bought before</h2>
+      <ul class="hist" id="hist"></ul>
+      <p class="fine" id="bought-next"></p>
+    </aside>
+
+    <section class="recs">
+      <h2 id="recs-title">Next twelve for this wardrobe</h2>
+      <ul class="grid" id="grid"></ul>
+      <p class="legend"><i></i> material score — longer is lower-impact fibre. Tiles are the item's real colour group.</p>
+    </section>
+  </div>
+
+  <footer>
+    Material scores are parsed from product copy and are a first pass, not a life-cycle assessment. "Kept" is a category-level repurchase proxy — the honest limits are in the repo's DECISIONS.md.
+  </footer>
+</main>
+
+<script>
+const DATA = /*__REWEAR_DATA__*/null;
+
+const COLOURS = {
+  "black":"#1a1a1a","white":"#fafafa","off white":"#f1ede4","light beige":"#e8dcc6","beige":"#d6c4a3","dark beige":"#b39a72",
+  "grey":"#9a9a9a","light grey":"#c9c9c9","dark grey":"#5a5a5a","greyish beige":"#bdb3a1","other":"#d9d9d9","unknown":"#d9d9d9",
+  "dark blue":"#1f2f57","blue":"#3b62b3","light blue":"#a9c4e6","turquoise":"#3aa8a0","dark turquoise":"#1f6f6a",
+  "dark green":"#274a2f","green":"#4b8a4e","light green":"#b9d8a8","khaki green":"#7b7d4d","yellowish green":"#b7c34a",
+  "red":"#b8312f","dark red":"#7a1f1f","light red":"#e88c8c","light pink":"#f2c9d3","pink":"#e58ca8","dark pink":"#b2416d","yellowish brown":"#a8823f",
+  "yellow":"#e9c84a","light yellow":"#f5e7a8","dark yellow":"#c9a227","orange":"#e0762b","light orange":"#f2b27a","dark orange":"#b45a1c",
+  "purple":"#6f4a9a","light purple":"#c8b3e0","dark purple":"#43285f","lilac purple":"#b39ddb","brown":"#7a4f2a","light brown":"#b08262","dark brown":"#4a2f1b",
+  "gold":"#c9a227","silver":"#bfc3c9","bronze/copper":"#a8672e","transparent":"#e8ecef"
+};
+function colourHex(name){
+  const k=(name||"").toLowerCase().trim();
+  if (COLOURS[k]) return COLOURS[k];
+  for (const key of Object.keys(COLOURS)) if (k.includes(key)) return COLOURS[key];
+  return "#d9d9d9";
+}
+function isDark(hex){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return (0.2126*r+0.7152*g+0.0722*b) < 140;
+}
+
+let cust = 0;
+let lam = "0.0";
+let prevIds = new Set();
+
+const picker = document.getElementById("picker");
+DATA.customers.forEach((c,i)=>{
+  const li=document.createElement("li");
+  const b=document.createElement("button");
+  b.textContent=c.label; b.setAttribute("aria-pressed", i===0);
+  b.addEventListener("click",()=>{ cust=i; prevIds=new Set(); render(); });
+  li.appendChild(b); picker.appendChild(li);
+});
+
+const slider=document.getElementById("lam");
+slider.addEventListener("input",()=>{ lam=(slider.value/10).toFixed(1); render(); });
+
+function renderHistory(c){
+  const hist=document.getElementById("hist"); hist.innerHTML="";
+  c.history.forEach(a=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<span class="sw"><span class="dot" style="background:${colourHex(a.colour)}"></span>${a.type||a.name}</span>`;
+    hist.appendChild(li);
+  });
+  const bn=document.getElementById("bought-next");
+  bn.textContent = c.bought_next.length
+    ? `Actually bought the following week: ${c.bought_next.map(a=>a.type.toLowerCase()).join(", ")}.`
+    : "";
+}
+
+function renderMetrics(){
+  const m=DATA.metrics[lam];
+  document.getElementById("m-lam").textContent=lam;
+  document.getElementById("m-map").textContent=m.map12.toFixed(4);
+  document.getElementById("m-ci").textContent=`(${m.ci_low.toFixed(4)}–${m.ci_high.toFixed(4)})`;
+  document.getElementById("m-mat").textContent=m.material.toFixed(2);
+  document.getElementById("m-tail").textContent=Math.round(m.long_tail*100)+"%";
+  slider.setAttribute("aria-valuetext", lam);
+}
+
+function render(){
+  const c=DATA.customers[cust];
+  [...picker.querySelectorAll("button")].forEach((b,i)=>b.setAttribute("aria-pressed", i===cust));
+  renderHistory(c); renderMetrics();
+
+  const grid=document.getElementById("grid");
+  // FLIP: record old positions, re-render, animate to new positions.
+  const first={}; [...grid.children].forEach(el=>{ first[el.dataset.id]=el.getBoundingClientRect(); });
+  grid.innerHTML="";
+  const recs=c.recs[lam];
+  recs.forEach((a,i)=>{
+    const hex=colourHex(a.colour);
+    const li=document.createElement("li");
+    li.className="tile "+(isDark(hex)?"dark":"light")+(prevIds.size&&!prevIds.has(a.id)?" new":"");
+    li.dataset.id=a.id; li.style.background=hex;
+    li.innerHTML=`<span class="rank">${i+1}</span>
+      <div class="name">${a.name}</div>
+      <div class="meta">${a.type}${a.colour?" · "+a.colour.toLowerCase():""}</div>
+      <div class="thread" title="material score ${a.material}"><i style="transform:scaleX(${a.material})"></i></div>`;
+    grid.appendChild(li);
+  });
+  [...grid.children].forEach(el=>{
+    const f=first[el.dataset.id]; if(!f) return;
+    const l=el.getBoundingClientRect();
+    const dx=f.left-l.left, dy=f.top-l.top;
+    if(!dx&&!dy) return;
+    el.style.transition="none"; el.style.transform=`translate(${dx}px,${dy}px)`;
+    requestAnimationFrame(()=>{ el.style.transition=""; el.style.transform=""; });
+  });
+  prevIds=new Set(recs.map(a=>a.id));
+}
+render();
+</script>
+</body>
+</html>

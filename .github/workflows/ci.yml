@@ -18,7 +18,11 @@ jobs:
       - run: ruff check src tests scripts
       - run: python -m pytest -q
       - run: python scripts/make_sample.py && python scripts/evaluate.py --data data/sample
+      - run: python scripts/train_ranker.py --data data/sample --rounds 100 --n-boot 100
+      - run: python scripts/train_ranker.py --data data/sample --rounds 60 --n-boot 50
       - uses: actions/upload-artifact@v4
         with:
           name: phase1-results
-          path: results/phase1_results.csv
+          path: |
+            results/*.csv
+            docs/frontier.png

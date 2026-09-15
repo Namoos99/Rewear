@@ -1,10 +1,12 @@
-# Rewear 
+# Rewear 🌱👗
 
 **A fashion recommender that optimizes for what you'll keep wearing, not just what you'll buy.**
 
 Most recommendation systems in fashion have one objective: the next purchase. Rewear asks a different question — *which pieces will earn a place in your rotation?* — and makes the trade-off between engagement and sustainability explicit, measurable, and tunable, instead of pretending the engagement-optimal ranking is the only one that exists.
 
 Built on the [H&M Personalized Fashion Recommendations](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations) dataset: ~1.3M customers, ~105k articles with images and descriptions, ~31M real transactions.
+
+**[▶ Try the live demo](https://namoos99.github.io/Rewear/demo/)** — pick a wardrobe, drag the dial, watch twelve recommendations reorder and see what it costs in accuracy.
 
 > "The goal is to turn data into information, and information into insight." — Carly Fiorina
 
@@ -35,7 +37,29 @@ Every model is evaluated on **accuracy and beyond**: MAP@12 (the Kaggle metric),
 | item-kNN + Rewear (λ=0.2) | **0.00602** | 0.2473 | 7.98 | 0.73 |
 | item-kNN + Rewear (λ=0.5) | 0.00448 | 0.2199 | 7.94 | 0.72 |
 
-Two findings. First, popularity wins on raw accuracy — the same result the Kaggle leaderboard produced, now confirmed here, and the reason Phase 3 exists. Second, and more interesting: a *light* sustainability rerank (λ=0.2) doesn't just cost accuracy, it **improves** MAP@12 by 15% over plain item-kNN while giving up almost nothing in coverage or novelty. The wear-again and material signals appear to regularise a noisy collaborative-filtering signal. Above λ≈0.3 the expected trade-off takes over and accuracy falls. That knee in the curve is the product decision.
+Two findings. First, popularity wins on raw accuracy — the same result the Kaggle leaderboard produced, now confirmed here, and the reason Phase 3 exists. Second, and more interesting: a *light* sustainability rerank (λ=0.2) doesn't just cost accuracy, it **improves** MAP@12 by 15% over plain item-kNN while giving up almost nothing in coverage or novelty. The wear-again and material signals appear to regularise a noisy collaborative-filtering signal. Above λ≈0.3 the expected trade-off takes over and accuracy falls. That knee in the curve is the product decision — and Phase 4 puts confidence intervals on it.
+
+### Phase 3 — the learned ranker
+
+The Phase 1 result is a *recall* problem: no single retriever sees the whole picture. Phase 3 unions candidates from four sources (repurchase, item-kNN, content similarity, popularity) and trains a LightGBM LambdaRank model to order them. The ranker is trained on a held-out "label week" it never sees at evaluation time, so there's no leakage. The sustainability signals go in as *features* — the model decides what they're worth for purchase probability.
+
+*50,000 sampled H&M customers (real data), same validation week as Phase 1.*
+
+| model | MAP@12 | coverage | novelty | long-tail exposure |
+|---|---|---|---|---|
+| popularity | 0.00810 | 0.0002 | 4.98 | 0.17 |
+| item-kNN | 0.00522 | 0.2501 | 8.02 | 0.74 |
+| **LightGBM ranker** | **0.02473** | 0.0605 | 4.55 | 0.16 |
+
+The ranker beats popularity by roughly 3x, with a 95% bootstrap interval (0.0205–0.0290) that doesn't overlap popularity's territory — this is where Phase 1's loss gets reversed. The top features by gain are recency (days since an article last sold, days since the customer last bought) and repurchase rank, not the sustainability signals — the model is mostly rediscovering "what's fresh and what this customer already likes," which is the expected, sensible thing for a purchase-probability model to learn.
+
+### Phase 4 — the frontier, with uncertainty
+
+A single MAP@12 on 2,590 customers is noisy, so every point on the λ sweep gets a 95% bootstrap interval (resampling customers). For the ranker, λ=0 is already the best MAP@12 — unlike the light-λ effect seen with item-kNN in Phase 1, the ranker doesn't need sustainability signals to regularise it, so accuracy declines steadily as λ increases. That's the expected, honest trade-off curve, and the plot below traces exactly how much each step costs.
+
+![accuracy vs sustainability frontier](docs/frontier.png)
+
+Full table with intervals: `results/frontier.csv` after `make ranker`.
 
 ## Quickstart
 
@@ -45,8 +69,12 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
 make sample      # synthetic data with the exact H&M schema — no download needed
-make test        # 14 tests, ~2 seconds
+make test        # 19 tests, ~5 seconds
 make evaluate    # Phase 1 table + λ sweep → results/phase1_results.csv
+make ranker      # Phases 3+4: LightGBM ranker, frontier with CIs → docs/frontier.png
+make demo        # Phase 5: static demo → docs/demo/index.html
+make ranker      # Phases 3–4: LightGBM ranker, bootstrap frontier → results/, docs/frontier.png
+make demo        # Phase 5: static demo → docs/demo/index.html
 ```
 
 To run on the real data: download the Kaggle archive into `data/raw/` (you need `articles.csv`, `customers.csv`, `transactions_train.csv`; images are optional until Phase 2), then:
@@ -63,20 +91,29 @@ src/rewear/
   baseline.py        popularity + time-decayed item-kNN
   sustainability.py  material parsing, wear-again proxy, λ-reranker
   content.py         text embeddings (TF-IDF or sentence-transformers), CLIP image embeddings
+  candidates.py      multi-source candidate generation (repurchase, kNN, content, popularity)
+  ranker.py          feature engineering + LightGBM LambdaRank, leak-free training scheme
+  frontier.py        bootstrap CIs and the accuracy-vs-sustainability sweep/plot
   metrics.py         MAP@K, coverage, novelty, long-tail exposure
+  candidates.py      multi-source candidate generation (repurchase / kNN / content / popularity)
+  ranker.py          feature building + LightGBM LambdaRank, leak-free two-window training
+  frontier.py        bootstrap CIs and the accuracy-vs-sustainability plot
   synthetic.py       schema-faithful synthetic generator for tests and CI
-scripts/             make_sample.py, evaluate.py
+scripts/             make_sample.py, evaluate.py, train_ranker.py, export_demo.py, train_ranker.py, export_demo.py
 tests/               pytest suite (runs in CI on every push)
 docs/DECISIONS.md    architecture decisions, written as interview answers
+docs/demo/           the static demo (template.html → index.html via export_demo.py)
+docs/demo/           the static demo (GitHub Pages)
 ```
 
 ## Roadmap
 
 - [x] **Phase 1 — Baselines.** Temporal split, popularity, item-kNN, full metric suite, λ sweep.
 - [x] **Phase 2 — Content tower.** Text embeddings with a no-download fallback; CLIP image embeddings for cold-start and the demo.
-- [ ] **Phase 3 — Learned reranker.** Multi-source candidate generation (repurchase, kNN, content, popularity) → LightGBM ranker with sustainability features. This is where popularity finally loses.
-- [ ] **Phase 4 — Evaluation write-up.** The accuracy-vs-sustainability frontier on real data, with confidence intervals.
-- [ ] **Phase 5 — Demo.** Interactive front-end: pick a customer, drag the λ slider, watch the recommendations shift.
+- [x] **Phase 3 — Learned reranker.** Multi-source candidate generation → LightGBM LambdaRank with sustainability features.
+- [x] **Phase 4 — Evaluation write-up.** The accuracy-vs-sustainability frontier with bootstrap confidence intervals.
+- [x] **Phase 5 — Demo.** Static page: pick a wardrobe, drag the dial, watch the rail reorder.
+- [ ] **Next.** CLIP image embeddings in the candidate set; per-customer λ learned from behaviour; return-rate as a "didn't work out" label.
 
 ## Honest limitations
 
