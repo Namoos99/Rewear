@@ -1,4 +1,4 @@
-# Rewear 🌱👗
+# Rewear
 
 **A fashion recommender that optimizes for what you'll keep wearing, not just what you'll buy.**
 
